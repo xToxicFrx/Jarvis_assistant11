@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIS</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- ===== LOGIN: fragt nur nach deinem persönlichen Passwort ===== -->
+  <!-- (Die API-Keys liegen sicher auf dem Server, nicht hier!) -->
+  <div id="login" class="overlay">
+    <h1>J.A.R.V.I.S</h1>
+    <p>Gib dein Zugangspasswort ein, um JARVIS zu starten.</p>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" />
+    <button id="loginBtn">ENTSPERREN</button>
+    <span id="loginErr" class="err"></span>
+  </div>
+
+  <!-- ===== HUD ===== -->
+  <div id="hud" class="hidden">
+
+    <header class="top">
+      <div class="brand">J.A.R.V.I.S</div>
+      <div class="datetime">
+        <span id="time">--:--:--</span>
+        <span id="date">--.--.----</span>
+      </div>
+    </header>
+
+    <aside class="panel left">
+      <h2>SYSTEM</h2>
+      <div class="stat">
+        <span class="label">SPEICHER</span>
+        <div class="bar"><div id="mem-bar" class="bar-fill"></div></div>
+      </div>
+      <div class="stat"><span class="label">VERBINDUNG</span><span id="net-val" class="val">--</span></div>
+      <div class="power"><span class="dot"></span> SYSTEM ONLINE</div>
+      <h2>MODELL</h2>
+      <div class="small">GPT-4o-mini · Whisper<br/>ElevenLabs · sicher (Server)</div>
+    </aside>
+
+    <main class="center">
+      <canvas id="viz" width="420" height="420"></canvas>
+      <div id="status" class="status">IDLE</div>
+    </main>
+
+    <aside class="panel right">
+      <h2>WETTER</h2>
+      <div class="weather">
+        <div id="weather-temp" class="temp">--°</div>
+        <div id="weather-desc" class="desc">lädt…</div>
+      </div>
+      <h2>BEDIENUNG</h2>
+      <div class="small">
+        🎤 Mikro-Knopf oder<br/>&nbsp;&nbsp;&nbsp;Leertaste halten<br/>
+        ⌨️ Text tippen + Enter
+      </div>
+    </aside>
+
+    <footer class="bottom">
+      <div id="transcript">Bereit. Sag etwas oder tippe eine Frage…</div>
+      <input id="textInput" type="text" placeholder="Tippe hier…" />
+      <button id="sendBtn">SENDEN</button>
+      <button id="micBtn" title="Halten zum Sprechen (oder Leertaste)">🎤</button>
+    </footer>
+
+  </div>
+
+  <script src="/js/voice-viz.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
