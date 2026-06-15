@@ -1,16 +1,10 @@
 // ============================================================
-// JARVIS — Browser-Logik (sichere Version mit Function-Calling)
-//
-// Ablauf:  Stimme/Text  →  Gehirn (kann Werkzeuge nutzen)  →  Stimme
-// Die API-Keys liegen sicher auf dem Server (Vercel), nie im Browser.
+// JARVIS — Browser-Logik
 // ============================================================
 
 const $ = (id) => document.getElementById(id);
 let appPassword = sessionStorage.getItem("jarvis_pw") || "";
 
-// ============================================================
-// API-AUFRUF (immer mit Passwort im Header)
-// ============================================================
 async function api(path, body, wantAudio = false) {
   const res = await fetch(path, {
     method: "POST",
@@ -30,9 +24,6 @@ async function api(path, body, wantAudio = false) {
   return wantAudio ? res.blob() : res.json();
 }
 
-// ============================================================
-// LOGIN
-// ============================================================
 function showLogin(msg) {
   $("hud").classList.add("hidden");
   $("login").classList.remove("hidden");
@@ -67,14 +58,11 @@ if (appPassword) {
 }
 
 // ============================================================
-// HAUPT-APP
-// ============================================================
 let started = false;
 function startJarvis() {
   if (started) return;
   started = true;
 
-  // ---- Persönlichkeit ----
   const today = new Date();
   const systemPrompt = {
     role: "system",
@@ -101,7 +89,6 @@ Nutze Werkzeuge selbstständig, wenn sie helfen.
 Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`,
   };
 
-  // ---- Gedächtnis (überlebt einen Seiten-Neuladen) ----
   let history = [systemPrompt];
   try {
     const saved = JSON.parse(localStorage.getItem("jarvis_history") || "[]");
@@ -110,46 +97,154 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
 
   function pushHistory(msg) {
     history.push(msg);
-    // Verlauf begrenzen (System-Prompt + letzte 24 Nachrichten) – spart Kosten
     if (history.length > 25) history = [systemPrompt, ...history.slice(history.length - 24)];
     try { localStorage.setItem("jarvis_history", JSON.stringify(history.slice(1))); } catch (e) {}
   }
 
   const setStatus = (s) => { $("status").textContent = s.toUpperCase(); };
 
-  // ---- animierter Hintergrund + Gauges starten ----
+  // ---- Hintergrund + Gauges ----
   HUDFX.initBackground();
   const gLoad = HUDFX.makeGauge("g-load");
   const gMem = HUDFX.makeGauge("g-mem");
   let simLoad = 0.3;
 
-  // ---- Aktivitäts-Log (zeigt, was JARVIS gerade tut) ----
-  function logActivity(text) {
+  // ---- Aktivitäts-Log mit Kategorien ----
+  function logActivity(text, type = "") {
     const el = $("log");
     if (!el) return;
     const time = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     const line = document.createElement("div");
-    line.className = "log-line";
+    line.className = "log-line" +
+      (type === "tool" ? " log-tool" : type === "ok" ? " log-ok" : type === "err" ? " log-err" : type === "user" ? " log-user" : "");
     line.textContent = `${time}  ${text}`;
     el.prepend(line);
-    while (el.children.length > 30) el.removeChild(el.lastChild);
+    while (el.children.length > 40) el.removeChild(el.lastChild);
   }
 
-  // ---- Vault-Panel (Zweites Gehirn) füllen ----
+  // ---- Vault-Panel ----
   function showStats(s) {
     if (!s) return;
     $("v-notes").textContent = s.notes;
     $("v-folders").textContent = s.folders;
-    $("v-tags").innerHTML = (s.tags || []).map(t => `<span class="tag">#${t}</span>`).join("");
+    $("v-tags").innerHTML = (s.tags || []).map(t =>
+      `<span class="tag" data-tag="${t}">#${t}</span>`
+    ).join("");
+    // Tags clickable: ask JARVIS about this tag
+    $("v-tags").querySelectorAll(".tag").forEach(el => {
+      el.addEventListener("click", () => run(`Was habe ich über #${el.dataset.tag} notiert?`));
+    });
   }
+
+  async function loadDailyNotePreview() {
+    if (!Obsidian.connected()) return;
+    try {
+      const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const note = await Obsidian.readNote(dateStr);
+      if (note) {
+        const preview = note.content.slice(0, 400);
+        $("daily-note-preview").textContent = preview || "(leer)";
+        $("daily-note-section").classList.remove("hidden");
+      }
+    } catch (e) { /* no daily note yet */ }
+  }
+
   async function refreshVault() {
     if (!Obsidian.connected()) return;
     try {
       showStats(await Obsidian.stats());
       const rec = await Obsidian.recent(6);
-      $("v-recent").innerHTML = rec.map(n => `<span class="n">• ${n.path}</span>`).join("") || "—";
+      const recEl = $("v-recent");
+      recEl.innerHTML = "";
+      rec.forEach(n => {
+        const span = document.createElement("span");
+        span.className = "n";
+        span.textContent = "• " + n.path;
+        span.title = n.path;
+        span.addEventListener("click", () => openNoteModal(n.path));
+        recEl.appendChild(span);
+      });
+      if (!rec.length) recEl.textContent = "—";
+      loadDailyNotePreview();
     } catch (e) { /* still */ }
   }
+
+  // ---- Note modal (read full note) ----
+  async function openNoteModal(query) {
+    $("noteModalTitle").textContent = query;
+    $("noteModalContent").textContent = "Lädt…";
+    $("noteModal").classList.remove("hidden");
+    try {
+      const note = await Obsidian.readNote(query);
+      $("noteModalContent").textContent = note ? note.content : "Nicht gefunden.";
+      $("noteModalTitle").textContent = note ? note.name : query;
+    } catch (e) {
+      $("noteModalContent").textContent = "Fehler: " + e.message;
+    }
+  }
+  $("noteModalClose").addEventListener("click", () => $("noteModal").classList.add("hidden"));
+  $("noteModal").addEventListener("click", (e) => { if (e.target === $("noteModal")) $("noteModal").classList.add("hidden"); });
+
+  // ---- Inline vault search ----
+  async function doVaultSearch() {
+    const q = $("vaultSearch").value.trim();
+    if (!q) return;
+    if (!Obsidian.connected()) { logActivity("⚠️ Vault nicht verbunden", "err"); return; }
+    const res = $("vaultSearchResults");
+    res.innerHTML = "Suche…";
+    res.classList.remove("hidden");
+    try {
+      const hits = await Obsidian.search(q, 8);
+      if (!hits.length) { res.innerHTML = `<span style="color:var(--cyan-dim)">Keine Treffer.</span>`; return; }
+      res.innerHTML = "";
+      hits.forEach(h => {
+        const span = document.createElement("span");
+        span.className = "sr";
+        span.textContent = `📄 ${h.name}: ${h.snippet}`;
+        span.addEventListener("click", () => openNoteModal(h.name));
+        res.appendChild(span);
+      });
+    } catch (e) {
+      res.textContent = "Fehler: " + e.message;
+    }
+  }
+  $("vaultSearchBtn").addEventListener("click", doVaultSearch);
+  $("vaultSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") doVaultSearch(); });
+
+  // ---- Quick save modal ----
+  $("quickSaveBtn").addEventListener("click", () => {
+    if (!Obsidian.connected()) {
+      logActivity("⚠️ Vault nicht verbunden für Quick-Save", "err");
+      return;
+    }
+    $("quickSaveModal").classList.remove("hidden");
+    $("quickSaveText").focus();
+  });
+  $("quickSaveClose").addEventListener("click", () => $("quickSaveModal").classList.add("hidden"));
+  $("quickSaveModal").addEventListener("click", (e) => { if (e.target === $("quickSaveModal")) $("quickSaveModal").classList.add("hidden"); });
+  $("quickSaveConfirm").addEventListener("click", async () => {
+    const text = $("quickSaveText").value.trim();
+    if (!text) return;
+    try {
+      await Obsidian.appendToDaily(text);
+      $("quickSaveText").value = "";
+      $("quickSaveModal").classList.add("hidden");
+      logActivity("💾 Idee gespeichert in Daily Note", "ok");
+      // Flash the left panel
+      document.querySelector(".left").classList.add("flash-save");
+      setTimeout(() => document.querySelector(".left").classList.remove("flash-save"), 900);
+      loadDailyNotePreview();
+    } catch (e) {
+      logActivity("⚠️ Quick-Save Fehler: " + e.message, "err");
+    }
+  });
+  // Ctrl+S shortcut
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.key === "s") {
+      e.preventDefault();
+      $("quickSaveBtn").click();
+    }
+  });
 
   // ---- Uhr ----
   const tick = () => {
@@ -159,27 +254,42 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
   };
   tick(); setInterval(tick, 1000);
 
-  // ---- Systeminfo + Gauges ----
+  // ---- System-Gauges ----
   setInterval(() => {
-    // Speicher (echt, nur Chrome) → Gauge "MEM"
     const m = performance.memory;
     gMem.set(m ? m.usedJSHeapSize / m.jsHeapSizeLimit : 0.4, "MEM");
-    // "Load" simuliert sanft schwankend (steigt, wenn JARVIS arbeitet)
     simLoad += (Math.random() - 0.5) * 0.08;
     simLoad = Math.max(0.12, Math.min(0.92, simLoad));
     gLoad.set(simLoad, "CORE");
     $("net-val").textContent = navigator.onLine ? "ONLINE" : "OFFLINE";
   }, 1200);
 
-  // ---- Wetter-Widget + Standort merken ----
-  let myLat = 47.37, myLon = 8.54; // Fallback: Zürich
+  // ---- Wetter mit 3-Tage-Vorschau ----
+  let myLat = 47.37, myLon = 8.54;
+  const WMO_ICONS = { 0: "☀️", 1: "🌤", 2: "⛅", 3: "☁️", 45: "🌫", 48: "🌫", 51: "🌦", 53: "🌦", 61: "🌧", 63: "🌧", 65: "🌧", 71: "❄️", 73: "❄️", 75: "❄️", 80: "🌧", 81: "🌧", 82: "⛈", 95: "⛈" };
+  const WMO_TXT = { 0: "Klar", 1: "Meist klar", 2: "Bewölkt", 3: "Bedeckt", 45: "Nebel", 61: "Regen", 71: "Schnee", 80: "Schauer", 95: "Gewitter" };
+  const DAYS_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
   async function loadWeatherWidget() {
     try {
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${myLat}&longitude=${myLon}&current=temperature_2m,weather_code`);
-      const d = await r.json();
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${myLat}&longitude=${myLon}`
+        + `&current=temperature_2m,weather_code`
+        + `&daily=temperature_2m_max,temperature_2m_min,weather_code`
+        + `&timezone=auto&forecast_days=4`;
+      const d = await (await fetch(url)).json();
       $("weather-temp").textContent = Math.round(d.current.temperature_2m) + "°";
-      const codes = { 0: "☀️ Klar", 1: "🌤 Meist klar", 2: "⛅ Bewölkt", 3: "☁️ Bedeckt", 45: "🌫 Nebel", 61: "🌧 Regen", 71: "❄️ Schnee", 80: "🌧 Schauer", 95: "⛈ Gewitter" };
-      $("weather-desc").textContent = codes[d.current.weather_code] || "--";
+      $("weather-desc").textContent = (WMO_ICONS[d.current.weather_code] || "🌡") + " " + (WMO_TXT[d.current.weather_code] || "–");
+
+      // 3-day forecast (skip today = index 0)
+      const fc = $("weather-forecast");
+      fc.innerHTML = "";
+      for (let i = 1; i <= 3; i++) {
+        const dt = new Date(d.daily.time[i] + "T12:00:00");
+        const icon = WMO_ICONS[d.daily.weather_code[i]] || "🌡";
+        const hi = Math.round(d.daily.temperature_2m_max[i]);
+        const lo = Math.round(d.daily.temperature_2m_min[i]);
+        fc.innerHTML += `<div class="fc-day"><span class="fc-name">${DAYS_SHORT[dt.getDay()]}</span><span class="fc-icon">${icon}</span><span class="fc-temp">${lo}°–${hi}°</span></div>`;
+      }
     } catch (e) { $("weather-desc").textContent = "n/a"; }
   }
   if (navigator.geolocation) {
@@ -191,9 +301,7 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
   } else loadWeatherWidget();
   setInterval(loadWeatherWidget, 600000);
 
-  // ========================================================
-  // WERKZEUG-KONTEXT (Helfer, die die Tools brauchen)
-  // ========================================================
+  // ---- Tool-Kontext ----
   const ctx = {
     location: () => ({ lat: myLat, lon: myLon }),
     webSearch: (q) => api("/api/search", { query: q }),
@@ -202,47 +310,40 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
       return await Obsidian.reconnect();
     },
     scheduleTimer: (secs, label) => {
-      logActivity(`⏳ Timer läuft (${secs}s)`);
+      logActivity(`⏳ Timer läuft (${secs}s)`, "tool");
       setTimeout(() => {
-        logActivity("⏰ Timer abgelaufen");
+        logActivity("⏰ Timer abgelaufen", "ok");
         speak(`Erinnerung${label ? ": " + label : ""}! Die Zeit ist um.`);
       }, secs * 1000);
     },
-    onStats: showStats, // Vault-Statistik direkt ins HUD spiegeln
+    onStats: showStats,
   };
 
-  // ========================================================
-  // GEHIRN mit Function-Calling (Agenten-Loop)
-  // Das Modell darf mehrmals Werkzeuge benutzen, bevor es antwortet.
-  // ========================================================
+  // ---- Agenten-Loop ----
   async function converse(userText) {
     pushHistory({ role: "user", content: userText });
     let rounds = 0;
     while (rounds++ < 6) {
       const { message } = await api("/api/chat", { messages: history, tools: TOOL_SCHEMAS });
       pushHistory(message);
-
-      // Will das Modell ein Werkzeug benutzen?
       if (message.tool_calls && message.tool_calls.length) {
         for (const call of message.tool_calls) {
           let args = {};
           try { args = JSON.parse(call.function.arguments || "{}"); } catch (e) {}
-          logActivity(`🔧 ${call.function.name}`);
+          logActivity(`🔧 ${call.function.name}`, "tool");
           let result;
           try { result = await runTool(call.function.name, args, ctx); }
           catch (e) { result = "Fehler im Werkzeug: " + e.message; }
           pushHistory({ role: "tool", tool_call_id: call.id, content: String(result) });
         }
-        continue; // mit den Werkzeug-Ergebnissen erneut fragen
+        continue;
       }
       return message.content || "";
     }
     return "Das hat leider zu viele Schritte gebraucht. Frag mich gern nochmal anders.";
   }
 
-  // ========================================================
-  // STIMME RAUS (ElevenLabs über /api/tts)
-  // ========================================================
+  // ---- TTS ----
   async function speak(text) {
     if (!text) { setStatus("IDLE"); return; }
     setStatus("SPEAKING");
@@ -271,45 +372,42 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
       await new Promise((r) => audio.addEventListener("ended", r));
       URL.revokeObjectURL(url);
     } catch (e) {
-      logActivity("⚠️ Stimme-Fehler: " + e.message);
+      logActivity("⚠️ Stimme-Fehler: " + e.message, "err");
     } finally {
       Viz.setLevel(0);
       setStatus("IDLE");
-      relistenWake(); // nach dem Sprechen wieder aufs Wake-Word lauschen
+      relistenWake();
     }
   }
 
-  // ========================================================
-  // HAUPT-LOOP: Eingabe → Gehirn (+Werkzeuge) → Stimme
-  // ========================================================
+  // ---- Haupt-Loop ----
   async function run(text) {
     if (!text || !text.trim()) return;
     $("transcript").textContent = "Du: " + text;
-    logActivity("💬 " + text);
+    $("transcript-center").textContent = "Du: " + text;
+    logActivity("💬 " + text, "user");
     setStatus("THINKING");
     Viz.setLevel(0.2);
     try {
       const reply = await converse(text);
       $("transcript").textContent = "JARVIS: " + reply;
-      refreshVault(); // Vault-Panel aktualisieren (falls Notizen geändert)
+      $("transcript-center").textContent = "JARVIS: " + reply;
+      refreshVault();
       await speak(reply);
     } catch (e) {
       console.error(e);
       $("transcript").textContent = "Fehler: " + e.message;
-      logActivity("⚠️ " + e.message);
+      logActivity("⚠️ " + e.message, "err");
       setStatus("IDLE"); Viz.setLevel(0);
     }
   }
 
-  // ---- Texteingabe ----
   $("sendBtn").addEventListener("click", () => {
     const v = $("textInput").value;
     $("textInput").value = "";
     run(v);
   });
   $("textInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("sendBtn").click(); });
-
-  // ---- Gespräch zurücksetzen ----
   $("resetBtn").addEventListener("click", () => {
     history = [systemPrompt];
     localStorage.removeItem("jarvis_history");
@@ -317,9 +415,7 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
     logActivity("🗑️ Gespräch zurückgesetzt");
   });
 
-  // ========================================================
-  // STIMME REIN (Mikro → Whisper über /api/stt)
-  // ========================================================
+  // ---- Mikro ----
   let mediaRec = null, chunks = [], micActive = false;
   const micBtn = $("micBtn");
 
@@ -337,7 +433,7 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
       micActive = false;
       micBtn.classList.remove("recording");
       setStatus("IDLE"); Viz.setLevel(0);
-      logActivity("⚠️ Kein Mikro-Zugriff");
+      logActivity("⚠️ Kein Mikro-Zugriff", "err");
     }
   }
 
@@ -375,15 +471,17 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
   micBtn.addEventListener("touchend", stopMic);
 
   document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && document.activeElement !== $("textInput")) { e.preventDefault(); startMic(); }
+    if (e.code === "Space" && document.activeElement !== $("textInput") && document.activeElement !== $("vaultSearch") && document.activeElement !== $("quickSaveText")) {
+      e.preventDefault(); startMic();
+    }
   });
   document.addEventListener("keyup", (e) => {
-    if (e.code === "Space" && document.activeElement !== $("textInput")) stopMic();
+    if (e.code === "Space" && document.activeElement !== $("textInput") && document.activeElement !== $("vaultSearch") && document.activeElement !== $("quickSaveText")) {
+      stopMic();
+    }
   });
 
-  // ========================================================
-  // OBSIDIAN-VAULT verbinden (Knopf 📂)
-  // ========================================================
+  // ---- Vault-Knopf ----
   const vaultBtn = $("vaultBtn");
   if (!Obsidian.isSupported()) {
     vaultBtn.textContent = "📂 n/a";
@@ -393,24 +491,21 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
     try {
       if (await Obsidian.reconnect()) {
         vaultBtn.classList.add("active");
-        logActivity("📂 Vault wiederverbunden");
+        logActivity("📂 Vault wiederverbunden", "ok");
         refreshVault();
         return;
       }
       await Obsidian.pick();
       vaultBtn.classList.add("active");
-      logActivity("📂 Vault verbunden");
+      logActivity("📂 Vault verbunden", "ok");
       refreshVault();
     } catch (e) {
-      logActivity("⚠️ Vault: " + e.message);
+      logActivity("⚠️ Vault: " + e.message, "err");
     }
   });
-  // Beim Start still versuchen, den gespeicherten Vault zu reaktivieren
   Obsidian.reconnect().then((ok) => { if (ok) { vaultBtn.classList.add("active"); refreshVault(); } });
 
-  // ========================================================
-  // WAKE-WORD "JARVIS" (Chrome-Spracherkennung, KEIN Key nötig)
-  // ========================================================
+  // ---- Wake-Word ----
   const wakeBtn = $("wakeBtn");
   let recognition = null, wakeOn = false;
 
@@ -432,7 +527,7 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
       const txt = Array.from(e.results).map(r => r[0].transcript).join(" ").toLowerCase();
       if (/(jarvis|jervis|dscharvis|service)/.test(txt)) {
         try { recognition.stop(); } catch (er) {}
-        logActivity("👂 Wake-Word erkannt");
+        logActivity("👂 Wake-Word erkannt", "ok");
         startMic();
         setTimeout(() => { if (micActive) stopMic(); }, 4500);
       }
@@ -447,7 +542,7 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
     if (wakeOn) {
       wakeBtn.textContent = "👂 AN"; wakeBtn.classList.add("active");
       try { recognition.start(); } catch (e) {}
-      logActivity("👂 Wake-Word aktiviert");
+      logActivity("👂 Wake-Word aktiviert", "ok");
     } else {
       wakeBtn.textContent = "👂 AUS"; wakeBtn.classList.remove("active");
       try { recognition.stop(); } catch (e) {}
@@ -456,6 +551,6 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
   });
 
   setStatus("IDLE");
-  logActivity("✅ JARVIS bereit");
-  console.log("JARVIS bereit (Function-Calling, alle Features).");
+  logActivity("✅ JARVIS bereit", "ok");
+  console.log("JARVIS bereit.");
 }
