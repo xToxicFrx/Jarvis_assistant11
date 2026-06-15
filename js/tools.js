@@ -143,6 +143,33 @@ const TOOL_SCHEMAS = [
   {
     type: "function",
     function: {
+      name: "find_connections",
+      description: "Durchsucht den Vault nach Verbindungen zwischen einem Thema und vorhandenen Notizen — aus mehreren Winkeln gleichzeitig. Nutze dies IMMER wenn Luca etwas Neues lernt, eine Idee hat oder etwas erzählt, damit überraschende Verbindungen zu bestehenden Notizen gefunden werden.",
+      parameters: {
+        type: "object",
+        properties: {
+          topic: { type: "string", description: "Das Hauptthema." },
+          angles: {
+            type: "array",
+            items: { type: "string" },
+            description: "3–5 verwandte Begriffe/Synonyme/Oberbegriffe die ebenfalls gesucht werden sollen.",
+          },
+        },
+        required: ["topic"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_note_titles",
+      description: "Gibt alle Notiz-Dateinamen im Vault zurück. Nutze dies bevor du eine neue Notiz anlegst, um zu prüfen ob das Thema schon existiert, und um Verbindungen zu erkennen.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "set_timer",
       description: "Stellt einen Timer/eine Erinnerung. JARVIS sagt dann Bescheid.",
       parameters: {
@@ -239,6 +266,22 @@ async function runTool(name, args, ctx) {
       if (!(await ctx.ensureVault())) return "Kein Obsidian-Vault verbunden. Bitte unten auf 📂 klicken.";
       const file = await Obsidian.appendToNote(args.note, args.text);
       return `An "${file}" angehängt.`;
+    }
+
+    case "find_connections": {
+      if (!(await ctx.ensureVault())) return "Kein Obsidian-Vault verbunden. Bitte unten auf 📂 klicken.";
+      const queries = [args.topic, ...(args.angles || [])].filter(Boolean);
+      const hits = await Obsidian.multiSearch(queries, 3);
+      if (!hits.length) return `Keine Verbindungen gefunden zu "${args.topic}" (auch nicht via ${queries.slice(1).join(", ")}).`;
+      return `🔗 Verbindungen gefunden (${hits.length}):\n` +
+        hits.map(h => `📄 ${h.name} [via "${h.matchedQuery}"]: ${h.snippet.slice(0, 120)}`).join("\n");
+    }
+
+    case "list_note_titles": {
+      if (!(await ctx.ensureVault())) return "Kein Obsidian-Vault verbunden. Bitte unten auf 📂 klicken.";
+      const titles = await Obsidian.getAllTitles();
+      if (!titles.length) return "Keine Notizen im Vault.";
+      return `${titles.length} Notizen:\n` + titles.join("\n");
     }
 
     case "set_timer": {

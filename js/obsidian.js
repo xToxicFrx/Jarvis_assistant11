@@ -221,9 +221,32 @@ const Obsidian = (() => {
     return name;
   }
 
+  // ---------- Alle Notiz-Titel zurückgeben (für Verbindungssuche) ----------
+  async function getAllTitles() {
+    const files = await allFiles();
+    return files.map(f => f.path);
+  }
+
+  // ---------- Mehrere Suchbegriffe parallel suchen (für Verbindungssuche) ----------
+  async function multiSearch(queries, maxPerQuery = 3) {
+    const seen = new Set();
+    const results = [];
+    for (const q of queries) {
+      const hits = await search(q, maxPerQuery);
+      for (const h of hits) {
+        if (!seen.has(h.name)) {
+          seen.add(h.name);
+          results.push({ ...h, matchedQuery: q });
+        }
+      }
+    }
+    return results;
+  }
+
   return {
     isSupported, pick, reconnect, connected,
     search, appendToDaily, createNote,
     readNote, recent, stats, appendToNote,
+    getAllTitles, multiSearch,
   };
 })();
