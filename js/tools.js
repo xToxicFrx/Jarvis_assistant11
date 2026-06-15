@@ -97,52 +97,6 @@ const TOOL_SCHEMAS = [
   {
     type: "function",
     function: {
-      name: "read_note",
-      description: "Liest eine ganze Obsidian-Notiz vollständig (für Details, Zusammenfassen, Weiterdenken).",
-      parameters: {
-        type: "object",
-        properties: { query: { type: "string", description: "Name oder Stichwort der gesuchten Notiz." } },
-        required: ["query"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "recent_notes",
-      description: "Listet die zuletzt bearbeiteten Notizen aus dem Vault.",
-      parameters: {
-        type: "object",
-        properties: { count: { type: "integer", description: "Wie viele (Standard 5)." } },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "vault_stats",
-      description: "Überblick über den Vault: Anzahl Notizen, Ordner, häufige Tags.",
-      parameters: { type: "object", properties: {} },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "append_to_note",
-      description: "Hängt Text an eine bestimmte, bereits vorhandene Notiz an (oder legt sie an).",
-      parameters: {
-        type: "object",
-        properties: {
-          note: { type: "string", description: "Name/Stichwort der Notiz." },
-          text: { type: "string", description: "Der anzuhängende Text (Markdown erlaubt)." },
-        },
-        required: ["note", "text"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "set_timer",
       description: "Stellt einen Timer/eine Erinnerung. JARVIS sagt dann Bescheid.",
       parameters: {
@@ -211,34 +165,6 @@ async function runTool(name, args, ctx) {
       if (!(await ctx.ensureVault())) return "Kein Obsidian-Vault verbunden. Bitte unten auf 📂 klicken.";
       const file = await Obsidian.createNote(args.title, args.content);
       return `Notiz "${file}" angelegt.`;
-    }
-
-    case "read_note": {
-      if (!(await ctx.ensureVault())) return "Kein Obsidian-Vault verbunden. Bitte unten auf 📂 klicken.";
-      const note = await Obsidian.readNote(args.query);
-      if (!note) return `Keine Notiz gefunden zu "${args.query}".`;
-      return `📄 ${note.name}\n\n${note.content}`;
-    }
-
-    case "recent_notes": {
-      if (!(await ctx.ensureVault())) return "Kein Obsidian-Vault verbunden. Bitte unten auf 📂 klicken.";
-      const list = await Obsidian.recent(args.count || 5);
-      if (!list.length) return "Keine Notizen gefunden.";
-      return "Zuletzt bearbeitet:\n" + list.map(n => `• ${n.path}`).join("\n");
-    }
-
-    case "vault_stats": {
-      if (!(await ctx.ensureVault())) return "Kein Obsidian-Vault verbunden. Bitte unten auf 📂 klicken.";
-      const s = await Obsidian.stats();
-      ctx.onStats && ctx.onStats(s);
-      return `Dein zweites Gehirn: ${s.notes} Notizen in ${s.folders} Ordnern.`
-        + (s.tags.length ? ` Häufige Tags: ${s.tags.map(t => "#" + t).join(", ")}.` : "");
-    }
-
-    case "append_to_note": {
-      if (!(await ctx.ensureVault())) return "Kein Obsidian-Vault verbunden. Bitte unten auf 📂 klicken.";
-      const file = await Obsidian.appendToNote(args.note, args.text);
-      return `An "${file}" angehängt.`;
     }
 
     case "set_timer": {

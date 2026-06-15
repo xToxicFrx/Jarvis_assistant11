@@ -1,17 +1,16 @@
 /* ============================================================
-   JARVIS HUD — "Command Center" (dunkel, cyan, animiert)
+   JARVIS HUD — Iron-Man-Stil (dunkel, cyan)
    ============================================================ */
 :root {
   --cyan: #2ff3ff;
   --cyan-dim: #2ff3ff66;
-  --cyan-faint: #2ff3ff22;
   --bg: #020912;
-  --panel: #04121f99;
+  --panel: #04121fcc;
   --red: #ff4a4a;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: radial-gradient(circle at 50% 45%, #06243b 0%, var(--bg) 75%);
+  background: radial-gradient(circle at 50% 50%, #05192b 0%, var(--bg) 70%);
   color: var(--cyan);
   font-family: 'Segoe UI', 'Courier New', monospace;
   height: 100vh;
@@ -20,18 +19,14 @@ body {
 }
 .hidden { display: none !important; }
 
-/* animierter Hintergrund-Canvas */
-#bg { position: fixed; inset: 0; z-index: 0; }
-
-/* ===== LOGIN ===== */
+/* ===== LOGIN-OVERLAY ===== */
 .overlay {
   position: fixed; inset: 0; z-index: 100;
   background: #020912ee;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 18px;
 }
-.overlay h1 { font-size: 32px; letter-spacing: 10px; text-shadow: 0 0 22px var(--cyan); animation: flick 4s infinite; }
-@keyframes flick { 0%,97%,100% { opacity: 1; } 98% { opacity: .55; } }
+.overlay h1 { font-size: 30px; letter-spacing: 9px; text-shadow: 0 0 20px var(--cyan); }
 .overlay p { color: var(--cyan-dim); font-size: 13px; max-width: 360px; text-align: center; }
 .overlay input {
   background: #04121f; border: 1px solid var(--cyan); color: var(--cyan);
@@ -48,9 +43,8 @@ body {
 
 /* ===== HUD-RASTER ===== */
 #hud {
-  position: relative; z-index: 1;
   display: grid;
-  grid-template-columns: 250px 1fr 250px;
+  grid-template-columns: 230px 1fr 230px;
   grid-template-rows: 64px 1fr 116px;
   grid-template-areas: "top top top" "left center right" "bottom bottom bottom";
   height: 100vh; gap: 14px; padding: 14px;
@@ -60,86 +54,65 @@ body {
   border-bottom: 1px solid var(--cyan-dim); padding: 0 10px;
 }
 .brand { font-size: 23px; font-weight: bold; letter-spacing: 6px; text-shadow: 0 0 14px var(--cyan); }
-.brand .sub { font-size: 10px; letter-spacing: 3px; color: var(--cyan-dim); margin-left: 10px; }
 .datetime { text-align: right; }
 #time { font-size: 21px; display: block; text-shadow: 0 0 8px var(--cyan); }
 #date { font-size: 11px; color: var(--cyan-dim); }
 
-/* Panels mit Eck-Klammern */
-.panel {
-  position: relative;
-  background: var(--panel); border: 1px solid var(--cyan-dim); border-radius: 4px;
-  padding: 15px; backdrop-filter: blur(3px); overflow: hidden;
-}
+.panel { background: var(--panel); border: 1px solid var(--cyan-dim); border-radius: 9px; padding: 15px; backdrop-filter: blur(2px); }
 .left { grid-area: left; } .right { grid-area: right; }
-.panel h2 {
-  font-size: 12px; letter-spacing: 3px; margin-bottom: 12px; padding-bottom: 5px;
-  border-bottom: 1px solid var(--cyan-dim); position: relative;
-}
-.panel h2::before { content: "▸ "; color: var(--cyan); }
-.panel h2:not(:first-of-type) { margin-top: 20px; }
+.panel h2 { font-size: 12px; letter-spacing: 3px; margin-bottom: 12px; padding-bottom: 5px; border-bottom: 1px solid var(--cyan-dim); }
+.panel h2:not(:first-child) { margin-top: 22px; }
+.small { font-size: 11px; color: var(--cyan-dim); line-height: 1.7; }
 
-/* Eck-Klammern */
-.bracket { position: absolute; width: 14px; height: 14px; border: 2px solid var(--cyan); }
-.bracket.tl { top: 4px; left: 4px; border-right: none; border-bottom: none; }
-.bracket.tr { top: 4px; right: 4px; border-left: none; border-bottom: none; }
-.bracket.bl { bottom: 4px; left: 4px; border-right: none; border-top: none; }
-.bracket.br { bottom: 4px; right: 4px; border-left: none; border-top: none; }
-
-/* Gauges */
-.gauges { display: flex; justify-content: space-around; margin-bottom: 8px; }
-.stat { margin-bottom: 10px; font-size: 12px; }
-.stat .label { color: var(--cyan-dim); }
+.stat { margin-bottom: 14px; font-size: 12px; }
+.stat .label { color: var(--cyan-dim); display: block; margin-bottom: 4px; }
 .stat .val { float: right; }
-.power { margin-top: 10px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+.bar { height: 6px; background: #ffffff11; border-radius: 3px; overflow: hidden; margin: 4px 0; }
+.bar-fill { height: 100%; width: 40%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); transition: width .5s; }
+.power { margin-top: 18px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
 .power .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
 
-/* Zweites Gehirn (Vault) */
-.vault-box { font-size: 11px; }
-.vault-row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--cyan-dim); }
-.vault-row span:last-child { color: var(--cyan); font-weight: bold; }
-.vault-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
-.vault-tags .tag { font-size: 9px; padding: 1px 6px; border: 1px solid var(--cyan-dim); border-radius: 8px; color: var(--cyan); }
-.vault-recent-title { color: var(--cyan-dim); margin-top: 8px; font-size: 10px; }
-.vault-recent { font-size: 10px; color: var(--cyan-dim); line-height: 1.6; max-height: 18vh; overflow-y: auto; }
-.vault-recent .n { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* MITTE */
 .center { grid-area: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-#viz { max-width: 100%; filter: drop-shadow(0 0 14px #2ff3ff33); }
-.status { margin-top: 14px; font-size: 18px; letter-spacing: 6px; text-shadow: 0 0 12px var(--cyan); }
+#viz { max-width: 100%; }
+.status { margin-top: 18px; font-size: 18px; letter-spacing: 5px; text-shadow: 0 0 10px var(--cyan); }
 
-/* Wetter */
 .weather { text-align: center; }
 .temp { font-size: 36px; text-shadow: 0 0 12px var(--cyan); }
 .desc { font-size: 13px; color: var(--cyan-dim); }
 
-/* Aktivitäts-Log */
-.log { font-size: 10.5px; line-height: 1.5; color: var(--cyan-dim); max-height: 40vh; overflow-y: auto; padding-right: 4px; }
-.log-line { padding: 2px 0; border-bottom: 1px solid var(--cyan-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.log::-webkit-scrollbar, .vault-recent::-webkit-scrollbar { width: 5px; }
-.log::-webkit-scrollbar-thumb, .vault-recent::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 3px; }
-
-/* UNTEN */
+/* ===== UNTEN: Eingabe ===== */
 .bottom {
-  grid-area: bottom; position: relative; background: var(--panel);
-  border: 1px solid var(--cyan-dim); border-radius: 4px;
-  padding: 12px 16px; display: flex; gap: 10px; align-items: center;
+  grid-area: bottom; background: var(--panel); border: 1px solid var(--cyan-dim);
+  border-radius: 9px; padding: 12px 16px; display: flex; gap: 10px; align-items: center;
 }
 #transcript { flex: 1; font-size: 13px; color: var(--cyan-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #textInput {
   background: #04121f; border: 1px solid var(--cyan-dim); color: var(--cyan);
   padding: 9px 12px; font-family: monospace; font-size: 13px; border-radius: 4px;
-  outline: none; flex: 1; max-width: 300px;
+  outline: none; flex: 1; max-width: 320px;
 }
-#textInput:focus { border-color: var(--cyan); box-shadow: 0 0 10px #2ff3ff44; }
-#sendBtn, #micBtn, #wakeBtn, #vaultBtn, #resetBtn {
+#textInput:focus { border-color: var(--cyan); }
+#sendBtn, #micBtn {
   background: transparent; border: 1px solid var(--cyan); color: var(--cyan);
-  padding: 8px 14px; font-family: monospace; font-size: 12px; letter-spacing: 2px;
-  cursor: pointer; border-radius: 4px; transition: .2s; white-space: nowrap;
+  padding: 8px 16px; font-family: monospace; font-size: 12px; letter-spacing: 2px;
+  cursor: pointer; border-radius: 4px; transition: .2s;
 }
-#sendBtn:hover, #micBtn:hover, #wakeBtn:hover, #vaultBtn:hover, #resetBtn:hover { background: #2ff3ff22; box-shadow: 0 0 12px #2ff3ff33; }
-#micBtn { font-size: 16px; padding: 8px 12px; }
+#sendBtn:hover, #micBtn:hover { background: #2ff3ff22; }
+#micBtn { padding: 8px 13px; font-size: 16px; }
 #micBtn.recording { background: #ff4a4a22; border-color: var(--red); color: var(--red); animation: pulse 1s infinite; }
+#wakeBtn, #vaultBtn, #resetBtn { white-space: nowrap; }
 #wakeBtn.active, #vaultBtn.active { background: #2ff3ff33; box-shadow: 0 0 14px #2ff3ff55; }
+
+/* Fähigkeiten-Liste (links) */
+.caps { list-style: none; }
+.caps li { font-size: 11px; color: var(--cyan-dim); padding: 4px 0; border-bottom: 1px solid #2ff3ff22; }
+
+/* Aktivitäts-Log (rechts) */
+.log {
+  font-size: 10.5px; line-height: 1.5; color: var(--cyan-dim);
+  max-height: 34vh; overflow-y: auto; padding-right: 4px;
+}
+.log-line { padding: 2px 0; border-bottom: 1px solid #2ff3ff11; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log::-webkit-scrollbar { width: 5px; }
+.log::-webkit-scrollbar-thumb { background: #2ff3ff44; border-radius: 3px; }

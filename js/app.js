@@ -78,25 +78,17 @@ function startJarvis() {
   const today = new Date();
   const systemPrompt = {
     role: "system",
-    content: `Du bist JARVIS, der persönliche KI-Assistent und das "zweite Gehirn" von Luca (14, lernt programmieren).
+    content: `Du bist JARVIS, ein persönlicher KI-Assistent für Luca (14 Jahre, lernt programmieren).
 
 PERSÖNLICHKEIT:
-- Du sprichst Deutsch, höflich, knapp, mit einer Prise Humor. Du duzt Luca.
-- Du bist motivierend, erklärst einfach und denkst aktiv mit.
+- Du sprichst Deutsch, höflich, knapp, mit einer Prise Humor.
+- Du duzt Luca, bist motivierend und erklärst Dinge einfach.
+- Wenn du etwas nicht sicher weißt, nutze deine Werkzeuge oder sag es ehrlich.
 
-DEIN WICHTIGSTER ZWECK – ZWEITES GEHIRN (Obsidian):
-- Du hilfst Luca, sein Wissen in Obsidian zu ERWEITERN, nicht nur abzurufen.
-- Wenn er etwas Interessantes erzählt, lernt oder eine Idee hat, biete an, es zu
-  speichern (save_to_daily_note oder create_note) – oder tu es, wenn er zustimmt.
-- Wenn er eine Frage zu seinem Wissen stellt, suche zuerst in den Notizen
-  (search_notes), lies bei Bedarf die ganze Notiz (read_note), und VERKNÜPFE
-  Ideen über mehrere Notizen hinweg.
-- Schlage aktiv Verbindungen vor ("Das passt zu deiner Notiz über X").
-- Beim Schreiben in Notizen nutze sauberes Markdown (Überschriften, Listen, #tags).
-
-WEITERE WERKZEUGE: Uhrzeit/Datum, Wetter & Vorhersage, Websuche (für aktuelle
-Fakten), Vault-Statistik, zuletzt bearbeitete Notizen, Timer/Erinnerungen.
-Nutze Werkzeuge selbstständig, wenn sie helfen.
+WERKZEUGE: Du kannst Uhrzeit/Datum abrufen, Wetter & Vorhersage holen, im Internet
+suchen, Lucas Obsidian-Notizen durchsuchen, Einträge in die Daily Note schreiben,
+neue Notizen anlegen und Timer stellen. Nutze sie selbstständig, wenn sie helfen –
+für aktuelle Fakten lieber die Websuche, für persönliche Dinge die Notizen.
 
 Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`,
   };
@@ -117,12 +109,6 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
 
   const setStatus = (s) => { $("status").textContent = s.toUpperCase(); };
 
-  // ---- animierter Hintergrund + Gauges starten ----
-  HUDFX.initBackground();
-  const gLoad = HUDFX.makeGauge("g-load");
-  const gMem = HUDFX.makeGauge("g-mem");
-  let simLoad = 0.3;
-
   // ---- Aktivitäts-Log (zeigt, was JARVIS gerade tut) ----
   function logActivity(text) {
     const el = $("log");
@@ -135,22 +121,6 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
     while (el.children.length > 30) el.removeChild(el.lastChild);
   }
 
-  // ---- Vault-Panel (Zweites Gehirn) füllen ----
-  function showStats(s) {
-    if (!s) return;
-    $("v-notes").textContent = s.notes;
-    $("v-folders").textContent = s.folders;
-    $("v-tags").innerHTML = (s.tags || []).map(t => `<span class="tag">#${t}</span>`).join("");
-  }
-  async function refreshVault() {
-    if (!Obsidian.connected()) return;
-    try {
-      showStats(await Obsidian.stats());
-      const rec = await Obsidian.recent(6);
-      $("v-recent").innerHTML = rec.map(n => `<span class="n">• ${n.path}</span>`).join("") || "—";
-    } catch (e) { /* still */ }
-  }
-
   // ---- Uhr ----
   const tick = () => {
     const n = new Date(), p = (x) => String(x).padStart(2, "0");
@@ -159,17 +129,12 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
   };
   tick(); setInterval(tick, 1000);
 
-  // ---- Systeminfo + Gauges ----
+  // ---- Systeminfo ----
   setInterval(() => {
-    // Speicher (echt, nur Chrome) → Gauge "MEM"
     const m = performance.memory;
-    gMem.set(m ? m.usedJSHeapSize / m.jsHeapSizeLimit : 0.4, "MEM");
-    // "Load" simuliert sanft schwankend (steigt, wenn JARVIS arbeitet)
-    simLoad += (Math.random() - 0.5) * 0.08;
-    simLoad = Math.max(0.12, Math.min(0.92, simLoad));
-    gLoad.set(simLoad, "CORE");
+    if (m) $("mem-bar").style.width = (m.usedJSHeapSize / m.jsHeapSizeLimit * 100).toFixed(0) + "%";
     $("net-val").textContent = navigator.onLine ? "ONLINE" : "OFFLINE";
-  }, 1200);
+  }, 2000);
 
   // ---- Wetter-Widget + Standort merken ----
   let myLat = 47.37, myLon = 8.54; // Fallback: Zürich
@@ -208,7 +173,6 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
         speak(`Erinnerung${label ? ": " + label : ""}! Die Zeit ist um.`);
       }, secs * 1000);
     },
-    onStats: showStats, // Vault-Statistik direkt ins HUD spiegeln
   };
 
   // ========================================================
@@ -291,7 +255,6 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
     try {
       const reply = await converse(text);
       $("transcript").textContent = "JARVIS: " + reply;
-      refreshVault(); // Vault-Panel aktualisieren (falls Notizen geändert)
       await speak(reply);
     } catch (e) {
       console.error(e);
@@ -394,19 +357,17 @@ Halte gesprochene Antworten natürlich und nicht zu lang. Heute ist ${today.toLo
       if (await Obsidian.reconnect()) {
         vaultBtn.classList.add("active");
         logActivity("📂 Vault wiederverbunden");
-        refreshVault();
         return;
       }
       await Obsidian.pick();
       vaultBtn.classList.add("active");
       logActivity("📂 Vault verbunden");
-      refreshVault();
     } catch (e) {
       logActivity("⚠️ Vault: " + e.message);
     }
   });
   // Beim Start still versuchen, den gespeicherten Vault zu reaktivieren
-  Obsidian.reconnect().then((ok) => { if (ok) { vaultBtn.classList.add("active"); refreshVault(); } });
+  Obsidian.reconnect().then((ok) => { if (ok) vaultBtn.classList.add("active"); });
 
   // ========================================================
   // WAKE-WORD "JARVIS" (Chrome-Spracherkennung, KEIN Key nötig)

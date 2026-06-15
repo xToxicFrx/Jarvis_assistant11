@@ -8,10 +8,7 @@
 </head>
 <body>
 
-  <!-- animierter Hintergrund (Gitter, Radar, Partikel) -->
-  <canvas id="bg"></canvas>
-
-  <!-- ===== LOGIN ===== -->
+  <!-- ===== LOGIN: fragt nur nach deinem persönlichen Passwort ===== -->
   <div id="login" class="overlay">
     <h1>J.A.R.V.I.S</h1>
     <p>Gib dein Zugangspasswort ein, um JARVIS zu starten.</p>
@@ -24,47 +21,42 @@
   <div id="hud" class="hidden">
 
     <header class="top">
-      <div class="brand">J.A.R.V.I.S<span class="sub">// PERSONAL ASSISTANT</span></div>
+      <div class="brand">J.A.R.V.I.S</div>
       <div class="datetime">
         <span id="time">--:--:--</span>
         <span id="date">--.--.----</span>
       </div>
     </header>
 
-    <!-- LINKS: System-Gauges + Zweites Gehirn -->
+    <!-- LINKS: System + Fähigkeiten -->
     <aside class="panel left">
-      <span class="bracket tl"></span><span class="bracket tr"></span>
-      <span class="bracket bl"></span><span class="bracket br"></span>
-
       <h2>SYSTEM</h2>
-      <div class="gauges">
-        <canvas id="g-load" width="74" height="74"></canvas>
-        <canvas id="g-mem" width="74" height="74"></canvas>
+      <div class="stat">
+        <span class="label">SPEICHER</span>
+        <div class="bar"><div id="mem-bar" class="bar-fill"></div></div>
       </div>
       <div class="stat"><span class="label">VERBINDUNG</span><span id="net-val" class="val">--</span></div>
       <div class="power"><span class="dot"></span> SYSTEM ONLINE</div>
 
-      <h2>ZWEITES GEHIRN</h2>
-      <div id="vaultBox" class="vault-box">
-        <div class="vault-row"><span>📓 Notizen</span><span id="v-notes">–</span></div>
-        <div class="vault-row"><span>📁 Ordner</span><span id="v-folders">–</span></div>
-        <div class="vault-tags" id="v-tags"></div>
-        <div class="vault-recent-title">Zuletzt:</div>
-        <div id="v-recent" class="vault-recent">Vault nicht verbunden (📂)</div>
-      </div>
+      <h2>FÄHIGKEITEN</h2>
+      <ul class="caps">
+        <li>🕑 Zeit &amp; Datum</li>
+        <li>🌤 Wetter-Vorhersage</li>
+        <li>🔎 Websuche</li>
+        <li>📓 Obsidian-Notizen</li>
+        <li>⏰ Timer &amp; Erinnerungen</li>
+        <li>🧠 Gedächtnis</li>
+      </ul>
     </aside>
 
-    <!-- MITTE: Reaktor -->
+    <!-- MITTE: Visualizer -->
     <main class="center">
       <canvas id="viz" width="420" height="420"></canvas>
       <div id="status" class="status">IDLE</div>
     </main>
 
-    <!-- RECHTS: Wetter + Aktivität -->
+    <!-- RECHTS: Wetter + Aktivitäts-Log -->
     <aside class="panel right">
-      <span class="bracket tl"></span><span class="bracket tr"></span>
-      <span class="bracket bl"></span><span class="bracket br"></span>
-
       <h2>WETTER</h2>
       <div class="weather">
         <div id="weather-temp" class="temp">--°</div>
@@ -87,8 +79,8 @@
 
   </div>
 
+  <!-- Scripts: erst Bausteine, dann app (startet alles) -->
   <script src="/js/voice-viz.js"></script>
-  <script src="/js/hud-fx.js"></script>
   <script src="/js/obsidian.js"></script>
   <script src="/js/tools.js"></script>
   <script src="/js/app.js"></script>
