@@ -8,8 +8,10 @@
 </head>
 <body>
 
-  <!-- ===== LOGIN: fragt nur nach deinem persönlichen Passwort ===== -->
-  <!-- (Die API-Keys liegen sicher auf dem Server, nicht hier!) -->
+  <!-- animierter Hintergrund (Gitter, Radar, Partikel) -->
+  <canvas id="bg"></canvas>
+
+  <!-- ===== LOGIN ===== -->
   <div id="login" class="overlay">
     <h1>J.A.R.V.I.S</h1>
     <p>Gib dein Zugangspasswort ein, um JARVIS zu starten.</p>
@@ -22,53 +24,73 @@
   <div id="hud" class="hidden">
 
     <header class="top">
-      <div class="brand">J.A.R.V.I.S</div>
+      <div class="brand">J.A.R.V.I.S<span class="sub">// PERSONAL ASSISTANT</span></div>
       <div class="datetime">
         <span id="time">--:--:--</span>
         <span id="date">--.--.----</span>
       </div>
     </header>
 
+    <!-- LINKS: System-Gauges + Zweites Gehirn -->
     <aside class="panel left">
+      <span class="bracket tl"></span><span class="bracket tr"></span>
+      <span class="bracket bl"></span><span class="bracket br"></span>
+
       <h2>SYSTEM</h2>
-      <div class="stat">
-        <span class="label">SPEICHER</span>
-        <div class="bar"><div id="mem-bar" class="bar-fill"></div></div>
+      <div class="gauges">
+        <canvas id="g-load" width="74" height="74"></canvas>
+        <canvas id="g-mem" width="74" height="74"></canvas>
       </div>
       <div class="stat"><span class="label">VERBINDUNG</span><span id="net-val" class="val">--</span></div>
       <div class="power"><span class="dot"></span> SYSTEM ONLINE</div>
-      <h2>MODELL</h2>
-      <div class="small">GPT-4o-mini · Whisper<br/>ElevenLabs · sicher (Server)</div>
+
+      <h2>ZWEITES GEHIRN</h2>
+      <div id="vaultBox" class="vault-box">
+        <div class="vault-row"><span>📓 Notizen</span><span id="v-notes">–</span></div>
+        <div class="vault-row"><span>📁 Ordner</span><span id="v-folders">–</span></div>
+        <div class="vault-tags" id="v-tags"></div>
+        <div class="vault-recent-title">Zuletzt:</div>
+        <div id="v-recent" class="vault-recent">Vault nicht verbunden (📂)</div>
+      </div>
     </aside>
 
+    <!-- MITTE: Reaktor -->
     <main class="center">
       <canvas id="viz" width="420" height="420"></canvas>
       <div id="status" class="status">IDLE</div>
     </main>
 
+    <!-- RECHTS: Wetter + Aktivität -->
     <aside class="panel right">
+      <span class="bracket tl"></span><span class="bracket tr"></span>
+      <span class="bracket bl"></span><span class="bracket br"></span>
+
       <h2>WETTER</h2>
       <div class="weather">
         <div id="weather-temp" class="temp">--°</div>
         <div id="weather-desc" class="desc">lädt…</div>
       </div>
-      <h2>BEDIENUNG</h2>
-      <div class="small">
-        🎤 Mikro-Knopf oder<br/>&nbsp;&nbsp;&nbsp;Leertaste halten<br/>
-        ⌨️ Text tippen + Enter
-      </div>
+      <h2>AKTIVITÄT</h2>
+      <div id="log" class="log"></div>
     </aside>
 
+    <!-- UNTEN: Eingabe & Knöpfe -->
     <footer class="bottom">
       <div id="transcript">Bereit. Sag etwas oder tippe eine Frage…</div>
       <input id="textInput" type="text" placeholder="Tippe hier…" />
       <button id="sendBtn">SENDEN</button>
       <button id="micBtn" title="Halten zum Sprechen (oder Leertaste)">🎤</button>
+      <button id="wakeBtn" title="Wake-Word an/aus: sag 'Jarvis'">👂 AUS</button>
+      <button id="vaultBtn" title="Obsidian-Vault verbinden">📂</button>
+      <button id="resetBtn" title="Gespräch / Gedächtnis löschen">🗑</button>
     </footer>
 
   </div>
 
   <script src="/js/voice-viz.js"></script>
+  <script src="/js/hud-fx.js"></script>
+  <script src="/js/obsidian.js"></script>
+  <script src="/js/tools.js"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>
