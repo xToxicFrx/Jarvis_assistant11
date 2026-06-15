@@ -78,10 +78,11 @@ Rechts im HUD zeigt das **Aktivitäts-Log** live, was gerade passiert.
 index.html        HUD + Login
 style.css         Aussehen
 js/
-  voice-viz.js    leuchtender Kreis (Visualizer)
-  obsidian.js     Vault lesen/schreiben (File System Access API)
-  tools.js        alle Werkzeuge (Wetter, Suche, Notizen, Timer …)
-  app.js          Login, Agenten-Loop, Mikro, Wake-Word, Gedächtnis
+  voice-viz.js    Arc-Reaktor-Visualizer (Mitte)
+  hud-fx.js       animierter Hintergrund (Gitter/Radar/Partikel) + Gauges
+  obsidian.js     Vault: suchen, ganze Notiz lesen, Statistik, schreiben
+  tools.js        11 Werkzeuge (Wetter, Suche, Notizen, Timer …)
+  app.js          Login, Agenten-Loop, Mikro, Wake-Word, Gedächtnis, Vault-Panel
 api/              SICHERE Server-Funktionen (Keys bleiben hier)
   _lib.js         Passwort-Prüfung
   chat.js         Gehirn (OpenAI, mit Function-Calling)
